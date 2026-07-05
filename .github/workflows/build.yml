@@ -3,7 +3,7 @@ name: Build Desktop Pet
 on:
   push:
     branches: [ "main", "master" ]
-  workflow_dispatch: # 允许在网页上手动触发打包
+  workflow_dispatch: 
 
 jobs:
   # ---- 1. Windows 打包任务 ----
@@ -27,19 +27,23 @@ jobs:
       run: |
         pyinstaller -F -w main.py
 
-    - name: 压缩打包产物 (检查 gif 是否存在并打包)
+    - name: 整理打包产物 (新建文件夹并复制文件)
+      shell: cmd
       run: |
-        powershell -Command "
-        $files = @('dist/main.exe', 'pet.png');
-        if (Test-Path 'pet.gif') { $files += 'pet.gif' };
-        Compress-Archive -Path $files -DestinationPath 'dist/DesktopPet_Windows.zip'
-        "
+        mkdir DesktopPet_Win
+        copy dist\main.exe DesktopPet_Win\
+        copy pet.png DesktopPet_Win\
+        if exist pet.gif copy pet.gif DesktopPet_Win\
+
+    - name: 压缩打包产物
+      run: |
+        powershell Compress-Archive -Path DesktopPet_Win -DestinationPath DesktopPet_Windows.zip
 
     - name: 上传 Windows 压缩包
       uses: actions/upload-artifact@v4
       with:
         name: DesktopPet-Windows
-        path: dist/DesktopPet_Windows.zip
+        path: DesktopPet_Windows.zip
 
   # ---- 2. macOS 打包任务 ----
   build-macos:
@@ -69,10 +73,10 @@ jobs:
         if [ -f "pet.gif" ]; then
           FILES="$FILES pet.gif"
         fi
-        zip -r dist/DesktopPet_macOS.zip $FILES
+        zip -r DesktopPet_macOS.zip $FILES
 
     - name: 上传 macOS 压缩包
       uses: actions/upload-artifact@v4
       with:
         name: DesktopPet-macOS
-        path: dist/DesktopPet_macOS.zip
+        path: DesktopPet_macOS.zip
