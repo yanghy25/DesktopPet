@@ -1,0 +1,78 @@
+name: Build Desktop Pet
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # 允许在网页上手动触发打包
+
+jobs:
+  # ---- 1. Windows 打包任务 ----
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 安装 Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 安装依赖库
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyQt5 pyinstaller
+
+    - name: 运行 PyInstaller 打包
+      run: |
+        pyinstaller -F -w main.py
+
+    - name: 压缩打包产物 (检查 gif 是否存在并打包)
+      run: |
+        powershell -Command "
+        $files = @('dist/main.exe', 'pet.png');
+        if (Test-Path 'pet.gif') { $files += 'pet.gif' };
+        Compress-Archive -Path $files -DestinationPath 'dist/DesktopPet_Windows.zip'
+        "
+
+    - name: 上传 Windows 压缩包
+      uses: actions/upload-artifact@v4
+      with:
+        name: DesktopPet-Windows
+        path: dist/DesktopPet_Windows.zip
+
+  # ---- 2. macOS 打包任务 ----
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 安装 Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 安装依赖库
+      run: |
+        python -m pip install --upgrade pip
+        pip install PyQt5 pyinstaller
+
+    - name: 运行 PyInstaller 打包
+      run: |
+        pyinstaller -F -w main.py
+
+    - name: 压缩打包产物 (检查 gif 是否存在并打包)
+      run: |
+        mv dist/main.app dist/DesktopPet.app
+        FILES="dist/DesktopPet.app pet.png"
+        if [ -f "pet.gif" ]; then
+          FILES="$FILES pet.gif"
+        fi
+        zip -r dist/DesktopPet_macOS.zip $FILES
+
+    - name: 上传 macOS 压缩包
+      uses: actions/upload-artifact@v4
+      with:
+        name: DesktopPet-macOS
+        path: dist/DesktopPet_macOS.zip
